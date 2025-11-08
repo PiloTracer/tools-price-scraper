@@ -1,0 +1,14 @@
+services:
+  price:
+    image: price_app_prd
+    container_name: price_app_prd
+    build:
+      context: .
+      dockerfile: Dockerfile.price.PRD
+    ports:
+      - "6502:3000"
+    environment:
+      - TZ=America/Costa_Rica
+    env_file:
+      - ./price/.env
+    restart: unless-stopped

@@ -1,0 +1,21 @@
+services:
+  price:
+    image: price_app_dev
+    container_name: price_app_dev
+    stdin_open: true
+    tty: true
+    build:
+      context: .
+      dockerfile: Dockerfile.price.dev
+    volumes:
+      - ./price:/code/price
+      - /code/price/node_modules
+    ports:
+      - "6502:3000"
+      - "9534:9229"
+    environment:
+      - TZ=America/Costa_Rica
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    env_file:
+      - ./price/.env
