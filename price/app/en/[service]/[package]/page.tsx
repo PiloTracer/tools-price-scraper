@@ -1,3 +1,4 @@
+import { Buffer } from "buffer";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,6 +6,7 @@ import { notFound } from "next/navigation";
 import { getPricingSources } from "@/lib/pricing/config";
 import { getPlanExtras, getServiceExtras } from "@/lib/pricing/extras";
 import { getProviderInfo } from "@/lib/pricing/provider";
+import type { PricingProduct } from "@/lib/pricing/types";
 import { scrapePricing } from "@/lib/pricing/scraper";
 
 type PlanPageParams = {
@@ -14,11 +16,29 @@ type PlanPageParams = {
 
 type PlanPageSearchParams = {
   currency?: string;
+  payload?: string;
 };
 
 type PlanDetailPageProps = {
   params: Promise<PlanPageParams>;
   searchParams: Promise<PlanPageSearchParams>;
+};
+
+type ProductPayload = {
+  id?: string;
+  ctaPlan?: string;
+  ctaService?: string;
+  ctaLocale?: string;
+  name?: string;
+  badge?: string;
+  specs?: string[];
+  price?: number;
+  adjustedPrice?: number;
+  currencySymbol?: string;
+  billingPeriod?: string;
+  currencySlug?: string;
+  priceIncreasePercent?: number;
+  sourceLabel?: string;
 };
 
 const DEFAULT_CURRENCY = "usd";
@@ -41,6 +61,70 @@ const humanizeSlug = (slug: string) =>
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const normalizeSlug = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+
+  return value.replace(/^\/+/, "").replace(/\/+$/, "").toLowerCase();
+};
+
+const collectSlugVariants = (value?: string) => {
+  const normalized = normalizeSlug(value);
+  if (!normalized) {
+    return [];
+  }
+
+  const segments = normalized.split("/").filter(Boolean);
+  const tail = segments[segments.length - 1];
+  return tail && tail !== normalized ? [normalized, tail] : [normalized];
+};
+
+const decodePayload = (raw?: string): ProductPayload | null => {
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const json = Buffer.from(raw, "base64url").toString("utf8");
+    return JSON.parse(json) as ProductPayload;
+  } catch {
+    return null;
+  }
+};
+
+const fallbackProductFromPayload = (payload: ProductPayload): PricingProduct => {
+  const price = payload.price ?? payload.adjustedPrice ?? 0;
+  const adjustedPrice = payload.adjustedPrice ?? payload.price ?? 0;
+  const [preDecimal, decimal] = price
+    .toFixed(2)
+    .split(".") as [string, string | undefined];
+
+  return {
+    id: payload.id ?? payload.ctaPlan ?? "package",
+    name: payload.name ?? humanizeSlug(payload.ctaPlan ?? "Package"),
+    badge: payload.badge,
+    price,
+    adjustedPrice,
+    currencySymbol: payload.currencySymbol ?? "$",
+    billingPeriod: payload.billingPeriod ?? "/ month",
+    specs: payload.specs ?? [],
+    ctaLabel: "Get Package",
+    ctaHref: "",
+    ctaHrefRaw: undefined,
+    ctaPath: `/${payload.ctaLocale ?? "en"}/${payload.ctaService ?? "vps"}/${
+      payload.ctaPlan ?? "package"
+    }/`,
+    ctaLocale: payload.ctaLocale ?? "en",
+    ctaService: payload.ctaService ?? "vps",
+    ctaPlan: payload.ctaPlan ?? "package",
+    rawPriceFragments: {
+      preDecimal,
+      decimal,
+    },
+  };
+};
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +174,7 @@ export default async function PlanDetailPage({
     typeof resolvedSearch.currency === "string" && resolvedSearch.currency.length > 0
       ? resolvedSearch.currency
       : DEFAULT_CURRENCY;
+  const payload = decodePayload(resolvedSearch.payload);
 
   let dataset;
   try {
@@ -98,18 +183,36 @@ export default async function PlanDetailPage({
     notFound();
   }
 
-  const planSlugLower = packageSlug.toLowerCase();
-  const product = dataset.products.find((plan) => {
-    const slugCandidates = [
+  const slugTargets = new Set<string>();
+  collectSlugVariants(packageSlug).forEach((slug) => slugTargets.add(slug));
+  collectSlugVariants(`${serviceSlug}/${packageSlug}`).forEach((slug) =>
+    slugTargets.add(slug),
+  );
+  if (payload) {
+    collectSlugVariants(payload.ctaPlan).forEach((slug) => slugTargets.add(slug));
+    collectSlugVariants(payload.id).forEach((slug) => slugTargets.add(slug));
+    collectSlugVariants(
+      payload.ctaService && payload.ctaPlan
+        ? `${payload.ctaService}/${payload.ctaPlan}`
+        : undefined,
+    ).forEach((slug) => slugTargets.add(slug));
+  }
+
+  const productMatch = dataset.products.find((plan) => {
+    const planSlugCandidates = [
       plan.ctaPlan,
       plan.id,
-      plan.ctaHrefRaw?.split("/").filter(Boolean).pop() ?? "",
+      plan.ctaPath,
+      plan.ctaHrefRaw,
+      `${plan.ctaService}/${plan.ctaPlan}`,
     ]
-      .filter(Boolean)
-      .map((slug) => slug.toLowerCase());
+      .flatMap((candidate) => collectSlugVariants(candidate))
+      .filter(Boolean);
 
-    return slugCandidates.includes(planSlugLower);
+    return planSlugCandidates.some((candidate) => slugTargets.has(candidate));
   });
+
+  const product = productMatch ?? (payload ? fallbackProductFromPayload(payload) : null);
 
   if (!product) {
     notFound();
@@ -119,10 +222,27 @@ export default async function PlanDetailPage({
   const serviceExtras = getServiceExtras(serviceSlug);
   const planExtras = getPlanExtras(serviceSlug, product.ctaPlan);
 
-  const adjustedPriceLabel = formatCurrency(product.adjustedPrice, currencySlug);
-  const basePriceLabel = formatCurrency(product.price, currencySlug);
+  const effectiveCurrency =
+    payload?.currencySlug && payload.currencySlug.length > 0
+      ? payload.currencySlug
+      : currencySlug;
 
-  const backHref = buildBackLink(serviceSlug, currencySlug);
+  const displayName = payload?.name ?? product.name;
+  const displayBadge = payload?.badge ?? product.badge;
+  const displaySpecs =
+    payload?.specs && payload.specs.length > 0 ? payload.specs : product.specs;
+  const displayAdjustedPrice =
+    payload?.adjustedPrice ?? product.adjustedPrice ?? product.price;
+  const displayBasePrice = payload?.price ?? product.price ?? product.adjustedPrice;
+  const displayBillingPeriod = payload?.billingPeriod ?? product.billingPeriod;
+  const priceAdjustmentPercent =
+    payload?.priceIncreasePercent ?? dataset.source.priceIncreasePercent;
+  const sourceLabel = payload?.sourceLabel ?? dataset.source.label;
+
+  const adjustedPriceLabel = formatCurrency(displayAdjustedPrice, effectiveCurrency);
+  const basePriceLabel = formatCurrency(displayBasePrice, effectiveCurrency);
+
+  const backHref = buildBackLink(serviceSlug, effectiveCurrency);
 
   return (
     <main className="relative min-h-screen bg-slate-950 text-slate-100">
@@ -147,11 +267,16 @@ export default async function PlanDetailPage({
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.35em] text-sky-300">
-                {serviceExtras?.serviceHeadline ?? humanizeSlug(serviceSlug)}
+                {serviceExtras?.serviceHeadline ?? humanizeSlug(sourceLabel)}
               </p>
               <h1 className="mt-3 text-4xl font-bold leading-snug text-white sm:text-5xl">
-                {humanizeSlug(product.name)}
+                {humanizeSlug(displayName)}
               </h1>
+              {displayBadge && (
+                <span className="mt-3 inline-flex items-center rounded-full border border-sky-400/30 bg-sky-500/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-sky-200">
+                  {displayBadge}
+                </span>
+              )}
               {planExtras?.tagline && (
                 <p className="mt-3 text-lg text-slate-300">{planExtras.tagline}</p>
               )}
@@ -171,11 +296,16 @@ export default async function PlanDetailPage({
               </span>
               <span className="text-xs text-slate-400">
                 Base price {basePriceLabel} · includes{" "}
-                {dataset.source.priceIncreasePercent > 0
-                  ? `+${dataset.source.priceIncreasePercent}%`
-                  : `${dataset.source.priceIncreasePercent}%`}{" "}
+                {priceAdjustmentPercent > 0
+                  ? `+${priceAdjustmentPercent}%`
+                  : `${priceAdjustmentPercent}%`}{" "}
                 adjustment
               </span>
+              {displayBillingPeriod && (
+                <span className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                  Billing cycle {displayBillingPeriod.trim()}
+                </span>
+              )}
             </div>
           </div>
 
@@ -201,7 +331,7 @@ export default async function PlanDetailPage({
               on demand.
             </p>
             <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-              {product.specs.map((spec) => (
+              {displaySpecs.map((spec) => (
                 <li
                   key={spec}
                   className="rounded-2xl border border-slate-800/60 bg-slate-900/70 px-5 py-4 text-sm text-slate-200"
@@ -376,10 +506,12 @@ export default async function PlanDetailPage({
                   >
                     <option value="monthly">Monthly · {adjustedPriceLabel}</option>
                     <option value="quarterly">
-                      Quarterly · {formatCurrency(product.adjustedPrice * 3, currencySlug)}
+                      Quarterly ·{" "}
+                      {formatCurrency(displayAdjustedPrice * 3, effectiveCurrency)}
                     </option>
                     <option value="annual">
-                      Annual · {formatCurrency(product.adjustedPrice * 12, currencySlug)}
+                      Annual ·{" "}
+                      {formatCurrency(displayAdjustedPrice * 12, effectiveCurrency)}
                     </option>
                   </select>
                 </label>
@@ -489,4 +621,3 @@ export default async function PlanDetailPage({
     </main>
   );
 }
-

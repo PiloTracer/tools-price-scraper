@@ -1,3 +1,4 @@
+import { Buffer } from "buffer";
 import Link from "next/link";
 import type { UrlObject } from "url";
 
@@ -51,15 +52,50 @@ const renderSpecList = (specs: PricingProduct["specs"]) =>
     </li>
   ));
 
+const encodeProductPayload = (
+  product: PricingProduct,
+  dataset: PricingDataset,
+  currencySlug: string,
+) => {
+  const payload = {
+    id: product.id,
+    ctaPlan: product.ctaPlan,
+    ctaService: product.ctaService,
+    ctaLocale: product.ctaLocale,
+    name: product.name,
+    badge: product.badge,
+    specs: product.specs,
+    price: product.price,
+    adjustedPrice: product.adjustedPrice,
+    currencySymbol: product.currencySymbol,
+    billingPeriod: product.billingPeriod,
+    currencySlug,
+    priceIncreasePercent: dataset.source.priceIncreasePercent,
+    sourceLabel: dataset.source.label,
+  };
+
+  try {
+    return Buffer.from(JSON.stringify(payload)).toString("base64url");
+  } catch {
+    return null;
+  }
+};
+
 const buildPlanHref = (
   product: PricingProduct,
   currencySlug: string,
+  payload: string | null,
 ): string | UrlObject => {
   const pathname = `/${product.ctaLocale}/${product.ctaService}/${product.ctaPlan}`;
-  const query =
-    currencySlug && currencySlug.length > 0 ? { currency: currencySlug } : undefined;
+  const query: Record<string, string> = {};
+  if (currencySlug && currencySlug.length > 0) {
+    query.currency = currencySlug;
+  }
+  if (payload) {
+    query.payload = payload;
+  }
 
-  return query ? { pathname, query } : pathname;
+  return Object.keys(query).length > 0 ? { pathname, query } : pathname;
 };
 
 export const PricingGrid = ({ dataset, currencySlug }: PricingGridProps) => {
@@ -144,7 +180,11 @@ export const PricingGrid = ({ dataset, currencySlug }: PricingGridProps) => {
             </ul>
 
             <Link
-              href={buildPlanHref(product, currencySlug)}
+              href={buildPlanHref(
+                product,
+                currencySlug,
+                encodeProductPayload(product, dataset, currencySlug),
+              )}
               className="group mt-8 inline-flex items-center justify-center gap-3 rounded-2xl bg-sky-500 px-5 py-3 text-base font-semibold text-slate-900 transition hover:bg-sky-400"
             >
               Get Package
