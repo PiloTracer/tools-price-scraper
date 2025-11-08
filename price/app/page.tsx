@@ -71,7 +71,7 @@ export default function Home() {
               </span>
               <p className="text-base text-slate-300">
                 Scraped directly from source with server-side rendering and
-                automatic price adjustments tuned to your business logic.
+                tuned to your business logic.
               </p>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-sky-300 group-hover:text-sky-200">
                 View pricing &rarr;

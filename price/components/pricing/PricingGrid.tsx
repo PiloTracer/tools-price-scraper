@@ -48,8 +48,8 @@ export const PricingGrid = ({ dataset, currencySlug }: PricingGridProps) => {
   const formatter = createCurrencyFormatter(currencySlug);
   const adjustmentCopy =
     dataset.source.priceIncreasePercent !== 0
-      ? `Includes ${dataset.source.priceIncreasePercent > 0 ? "+" : ""}${dataset.source.priceIncreasePercent}% adjustment`
-      : "No price adjustment applied";
+      ? `Includes management fees`
+      : "No fees applied";
   const fetchedAt = dataset.fetchedAt.toLocaleString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
