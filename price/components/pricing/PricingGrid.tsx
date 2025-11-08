@@ -75,7 +75,7 @@ export const PricingGrid = ({ dataset, currencySlug }: PricingGridProps) => {
             target="_blank"
             rel="noreferrer"
           >
-            Contabo
+            AI Epic
           </a>{" "}
           and enriched to fit your configuration needs. {adjustmentCopy}.
         </p>

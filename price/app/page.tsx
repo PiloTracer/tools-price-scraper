@@ -24,10 +24,10 @@ export default function Home() {
       />
       <div className="relative flex max-w-4xl flex-col items-center text-center">
         <span className="rounded-full bg-sky-500/10 px-4 py-1 text-sm font-semibold uppercase tracking-widest text-sky-300 ring-1 ring-sky-500/30">
-          EPIC Pricing Portal
+          AI EPIC Pricing Portal
         </span>
         <h1 className="mt-6 text-5xl font-bold leading-tight text-slate-50 sm:text-6xl">
-          Compare Contabo plans in real time
+          Compare plans in real time
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-slate-300">
           Pick a pricing category below and swap the currency slug in the URL
@@ -70,7 +70,7 @@ export default function Home() {
                 Explore {source.label} plans
               </span>
               <p className="text-base text-slate-300">
-                Scraped directly from Contabo with server-side rendering and
+                Scraped directly from source with server-side rendering and
                 automatic price adjustments tuned to your business logic.
               </p>
               <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-sky-300 group-hover:text-sky-200">

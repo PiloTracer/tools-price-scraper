@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EPIC Contabo Pricing",
+  title: "AIEpicStudio Pricing",
   description:
-    "World-class pricing portal with live Contabo VPS and VDS plans, scraped and enriched in real time.",
+    "World-class pricing portal with live VPS and VDS plans, scraped and enriched in real time.",
 };
 
 export default function RootLayout({

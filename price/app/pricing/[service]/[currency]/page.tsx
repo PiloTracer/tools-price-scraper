@@ -27,7 +27,7 @@ export async function generateMetadata({
 
     return {
       title: `${source.label} Pricing (${currency})`,
-      description: `Live ${source.label} plans scraped from Contabo for ${currency} currency.`,
+      description: `Live ${source.label} plans scraped from source for ${currency} currency.`,
     };
   } catch {
     return {
