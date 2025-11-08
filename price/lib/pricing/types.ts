@@ -19,6 +19,11 @@ export type PricingProduct = {
   specs: string[];
   ctaLabel: string;
   ctaHref: string;
+  ctaHrefRaw?: string;
+  ctaPath: string;
+  ctaLocale: string;
+  ctaService: string;
+  ctaPlan: string;
   rawPriceFragments: {
     preDecimal: string;
     decimal?: string;
@@ -31,4 +36,3 @@ export type PricingDataset = {
   fetchedAt: Date;
   resolvedUrl: string;
 };
-

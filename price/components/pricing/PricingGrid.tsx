@@ -1,3 +1,7 @@
+import Link from "next/link";
+import type { UrlObject } from "url";
+
+import { getProviderInfo } from "@/lib/pricing/provider";
 import type { PricingDataset, PricingProduct } from "@/lib/pricing/types";
 
 type PricingGridProps = {
@@ -33,6 +37,9 @@ const createCurrencyFormatter = (currencySlug: string) => {
   }
 };
 
+const { name: providerName, url: providerUrl } =
+  getProviderInfo();
+
 const renderSpecList = (specs: PricingProduct["specs"]) =>
   specs.map((spec) => (
     <li key={spec} className="flex items-start gap-2 text-sm text-slate-100">
@@ -44,12 +51,23 @@ const renderSpecList = (specs: PricingProduct["specs"]) =>
     </li>
   ));
 
+const buildPlanHref = (
+  product: PricingProduct,
+  currencySlug: string,
+): string | UrlObject => {
+  const pathname = `/${product.ctaLocale}/${product.ctaService}/${product.ctaPlan}`;
+  const query =
+    currencySlug && currencySlug.length > 0 ? { currency: currencySlug } : undefined;
+
+  return query ? { pathname, query } : pathname;
+};
+
 export const PricingGrid = ({ dataset, currencySlug }: PricingGridProps) => {
   const formatter = createCurrencyFormatter(currencySlug);
   const adjustmentCopy =
     dataset.source.priceIncreasePercent !== 0
-      ? `Includes management fees`
-      : "No fees applied";
+      ? `Includes ${dataset.source.priceIncreasePercent > 0 ? "+" : ""}${dataset.source.priceIncreasePercent}% adjustment`
+      : "No price adjustment applied";
   const fetchedAt = dataset.fetchedAt.toLocaleString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
@@ -71,11 +89,11 @@ export const PricingGrid = ({ dataset, currencySlug }: PricingGridProps) => {
           Real-time pricing scraped directly from{" "}
           <a
             className="font-semibold text-sky-300 hover:text-sky-200"
-            href={dataset.resolvedUrl}
+            href={providerUrl}
             target="_blank"
             rel="noreferrer"
           >
-            AI Epic
+            {providerName}
           </a>{" "}
           and enriched to fit your configuration needs. {adjustmentCopy}.
         </p>
@@ -125,17 +143,15 @@ export const PricingGrid = ({ dataset, currencySlug }: PricingGridProps) => {
               {renderSpecList(product.specs)}
             </ul>
 
-            <a
-              href={product.ctaHref}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              href={buildPlanHref(product, currencySlug)}
               className="group mt-8 inline-flex items-center justify-center gap-3 rounded-2xl bg-sky-500 px-5 py-3 text-base font-semibold text-slate-900 transition hover:bg-sky-400"
             >
-              {product.ctaLabel}
+              Get Package
               <span className="inline-flex size-6 items-center justify-center rounded-full bg-slate-900/10 transition group-hover:bg-slate-900/25">
                 &rarr;
               </span>
-            </a>
+            </Link>
           </article>
         ))}
       </div>

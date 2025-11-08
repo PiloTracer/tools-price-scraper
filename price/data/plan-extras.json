@@ -1,0 +1,84 @@
+{
+  "vps": {
+    "serviceHeadline": "Elastic VPS orchestration built for fast-moving teams",
+    "serviceHighlights": [
+      "Global footprint with low-latency regions in North America, Europe, and Asia",
+      "99.99% SLA commitment with proactive monitoring and automated failover",
+      "SLA-backed support with 30-minute engineer response escalation"
+    ],
+    "plans": {
+      "cloud-vps-40": {
+        "tagline": "Balanced compute for staging environments and production APIs.",
+        "summary": "Includes snapshot automation, custom ISO support, and granular firewall rules managed via the EPIC control panel.",
+        "highlights": [
+          "Priority ticket queue with 24/7 escalation",
+          "Complimentary migration concierge (up to 2 source servers)",
+          "Daily incremental backups retained for 7 days"
+        ],
+        "addons": [
+          {
+            "name": "Managed Backups",
+            "price": "$15 / month",
+            "description": "Two additional region-redundant copies retained for 30 days."
+          },
+          {
+            "name": "Advanced WAF",
+            "price": "$29 / month",
+            "description": "Layer-7 protection with ML-driven anomaly detection."
+          }
+        ],
+        "faqs": [
+          {
+            "question": "Can I upgrade later without downtime?",
+            "answer": "Yes. Upgrades across the Cloud VPS line are seamless and preserve snapshots and IP addresses."
+          },
+          {
+            "question": "Is root access included?",
+            "answer": "Full root access is provided, along with a recovery console inside the EPIC control plane."
+          }
+        ]
+      },
+      "cloud-vps-10": {
+        "tagline": "Starter footprint ideal for development sandboxes and CI agents.",
+        "summary": "Lightweight compute with NVMe storage and instant provisioning in any EPIC data center.",
+        "highlights": [
+          "Automated snapshots every 24 hours",
+          "Unlimited inbound bandwidth",
+          "IPv6 support out of the box"
+        ]
+      }
+    }
+  },
+  "vds": {
+    "serviceHeadline": "Bare-metal performance with virtualized elasticity",
+    "serviceHighlights": [
+      "Dedicated AMD EPYC cores with kernel-level isolation",
+      "Tier-3 data centers with SOC 2 Type II certification",
+      "Hardware RAID with hot-spare redundancy"
+    ],
+    "plans": {
+      "cloud-vds-xl": {
+        "tagline": "Production-grade compute for heavy transactional workloads.",
+        "summary": "Optimized for data-intensive services, analytics workloads, and sustained CPU utilization.",
+        "highlights": [
+          "Dual redundant power feeds with automatic failover",
+          "1.5x burst bandwidth pool included",
+          "Premium on-call engineering escalation"
+        ],
+        "addons": [
+          {
+            "name": "Managed Kubernetes",
+            "price": "$120 / month",
+            "description": "Deploy a fully managed K8s control plane on top of your dedicated compute footprint."
+          },
+          {
+            "name": "Dedicated Account Manager",
+            "price": "$49 / month",
+            "description": "Quarterly architecture reviews and tailored roadmaps."
+          }
+        ]
+      }
+    }
+  }
+}
+

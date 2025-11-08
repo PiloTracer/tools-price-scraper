@@ -32,6 +32,49 @@ const toAbsoluteUrl = (href: string | undefined, baseUrl: string) => {
   }
 };
 
+const normalizePath = (path: string) => {
+  const trimmed = path.trim();
+  if (trimmed.length === 0) {
+    return "/";
+  }
+
+  const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return prefixed.replace(/\/{2,}/g, "/");
+};
+
+const parseCtaTarget = (
+  rawHref: string | undefined,
+  resolvedUrl: string,
+  fallbackService: string,
+  fallbackPlan: string,
+) => {
+  const defaultLocale = "en";
+  let path = normalizePath(`${defaultLocale}/${fallbackService}/${fallbackPlan}`);
+
+  if (rawHref) {
+    try {
+      const url = new URL(rawHref, resolvedUrl);
+      path = normalizePath(url.pathname);
+    } catch {
+      path = normalizePath(rawHref);
+    }
+  }
+
+  const normalizedPath = path.endsWith("/") ? path : `${path}/`;
+  const segments = normalizedPath.split("/").filter(Boolean);
+
+  const locale = segments[0] ?? defaultLocale;
+  const service = segments[1] ?? fallbackService;
+  const plan = (segments[2] ?? fallbackPlan).replace(/\/$/, "");
+
+  return {
+    locale,
+    service,
+    plan,
+    path: normalizedPath,
+  };
+};
+
 const parsePrice = ($product: cheerio.Cheerio<Element>) => {
   const currencySymbol = $product.find(".currency-symbol").first().text().trim();
   const preDecimal = sanitizeDigits(
@@ -94,7 +137,9 @@ const parseProductCard = (
 
   const cta = $product.find(".cta-container a").first();
   const ctaLabel = cta.text().replace(/\s+/g, " ").trim() || "Configure";
-  const ctaHref = toAbsoluteUrl(cta.attr("href"), resolvedUrl);
+  const ctaHrefRaw = cta.attr("href")?.trim() ?? "";
+  const ctaHref = toAbsoluteUrl(ctaHrefRaw, resolvedUrl);
+  const ctaTarget = parseCtaTarget(ctaHrefRaw, resolvedUrl, source.key, id);
 
   const adjustedPrice =
     priceInfo.basePrice * (1 + source.priceIncreasePercent / 100);
@@ -110,6 +155,11 @@ const parseProductCard = (
     specs,
     ctaLabel,
     ctaHref,
+    ctaHrefRaw: ctaHrefRaw || undefined,
+    ctaPath: ctaTarget.path,
+    ctaLocale: ctaTarget.locale,
+    ctaService: ctaTarget.service,
+    ctaPlan: ctaTarget.plan,
     rawPriceFragments: priceInfo.fragments,
   };
 };
